@@ -52,6 +52,7 @@ type StatusMessage struct {
 	TxWatchdog           bool   `json:"txWatchdog"`
 	SubMode              string `json:"submode"`
 	FastMode             bool   `json:"fastMode"`
+	TxFirst              bool   `json:"txFirst"`
 	SpecialOperationMode uint8  `json:"specialMode"`
 	FrequencyTolerance   uint32 `json:"frequencyTolerance"`
 	TRPeriod             uint32 `json:"txRxPeriod"`

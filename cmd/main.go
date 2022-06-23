@@ -2,18 +2,30 @@ package main
 
 import (
 	"bufio"
+	"flag"
+	"github.com/k0swe/wsjtx-go/v4/pkg/city"
+	"github.com/k0swe/wsjtx-go/v4/pkg/monitor"
 	"log"
 	"os"
-	"reflect"
 	"strings"
 
 	"github.com/k0swe/wsjtx-go/v4"
 )
 
+var (
+	jtdxAddr = flag.String("jtdx-addr", "239.255.0.0", "Bind address or Multicast address")
+	ctyPath  = flag.String("cty-path", "d:/cty.dat", "CTY file")
+)
+
 // Simple driver binary for wsjtx-go library.
 func main() {
+	flag.Parse()
+	//log.SetFlags(log.Llongfile)
 	log.Println("Listening for WSJT-X...")
-	wsjtxServer, err := wsjtx.MakeServer()
+	if err := city.LoadFromCTYData(*ctyPath); err != nil {
+		log.Fatalf("%v", err)
+	}
+	wsjtxServer, err := wsjtx.MakeServer(*jtdxAddr)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
@@ -52,27 +64,29 @@ func stdinCmd(c chan string) {
 	}
 }
 
+var defaultDecodeMessageMonitor = monitor.NewDefaultMonitor()
+
 // When we receive WSJT-X messages, display them.
 func handleServerMessage(message interface{}) {
 	switch message.(type) {
-	case wsjtx.HeartbeatMessage:
-		log.Println("Heartbeat:", message)
-	case wsjtx.StatusMessage:
-		log.Println("Status:", message)
+	//case wsjtx.HeartbeatMessage:
+	//	log.Println("Heartbeat:", message)
+	//case wsjtx.StatusMessage:
+	//	log.Println("Status:", message)
 	case wsjtx.DecodeMessage:
-		log.Println("Decode:", message)
-	case wsjtx.ClearMessage:
-		log.Println("Clear:", message)
-	case wsjtx.QsoLoggedMessage:
-		log.Println("QSO Logged:", message)
-	case wsjtx.CloseMessage:
-		log.Println("Close:", message)
-	case wsjtx.WSPRDecodeMessage:
-		log.Println("WSPR Decode:", message)
-	case wsjtx.LoggedAdifMessage:
-		log.Println("Logged Adif:", message)
+		defaultDecodeMessageMonitor.Monit(message.(wsjtx.DecodeMessage))
+	//case wsjtx.ClearMessage:
+	//	log.Println("Clear:", message)
+	//case wsjtx.QsoLoggedMessage:
+	//	log.Println("QSO Logged:", message)
+	//case wsjtx.CloseMessage:
+	//	log.Println("Close:", message)
+	//case wsjtx.WSPRDecodeMessage:
+	//	log.Println("WSPR Decode:", message)
+	//case wsjtx.LoggedAdifMessage:
+	//	log.Println("Logged Adif:", message)
 	default:
-		log.Println("Other:", reflect.TypeOf(message), message)
+		//log.Println("Other:", reflect.TypeOf(message), message)
 	}
 }
 

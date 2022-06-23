@@ -118,7 +118,7 @@ func (p *parser) parseHeartbeat() (HeartbeatMessage, error) {
 	heartbeatMessage.Id, err = p.parseUtf8()
 	heartbeatMessage.MaxSchema, err = p.parseUint32()
 	heartbeatMessage.Version, err = p.parseUtf8()
-	heartbeatMessage.Revision, err = p.parseUtf8()
+	//heartbeatMessage.Revision, err = p.parseUtf8()
 	return heartbeatMessage, err
 }
 
@@ -142,11 +142,12 @@ func (p *parser) parseStatus() (StatusMessage, error) {
 	statusMessage.TxWatchdog, err = p.parseBool()
 	statusMessage.SubMode, err = p.parseUtf8()
 	statusMessage.FastMode, err = p.parseBool()
-	statusMessage.SpecialOperationMode, err = p.parseUint8()
-	statusMessage.FrequencyTolerance, err = p.parseUint32()
-	statusMessage.TRPeriod, err = p.parseUint32()
-	statusMessage.ConfigurationName, err = p.parseUtf8()
-	statusMessage.TxMessage, err = p.parseUtf8()
+	statusMessage.TxFirst, err = p.parseBool()
+	//statusMessage.SpecialOperationMode, err = p.parseUint8()
+	//statusMessage.FrequencyTolerance, err = p.parseUint32()
+	//statusMessage.TRPeriod, err = p.parseUint32()
+	//statusMessage.ConfigurationName, err = p.parseUtf8()
+	//statusMessage.TxMessage, err = p.parseUtf8()
 	return statusMessage, err
 }
 

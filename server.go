@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net"
-	"runtime"
 )
 
 const magic = 0xadbccbda
@@ -12,7 +11,7 @@ const schema = 2
 const qDataStreamNull = 0xffffffff
 const bufLen = 1024
 const localhostAddr = "127.0.0.1"
-const multicastAddr = "224.0.0.1"
+const multicastAddr = "239.255.0.0"
 const wsjtxPort = 2237
 
 type Server struct {
@@ -25,15 +24,15 @@ var NotConnectedError = fmt.Errorf("haven't heard from wsjtx yet, don't know whe
 
 // MakeServer creates a multicast UDP connection to communicate with WSJT-X on the default address
 // and port.
-func MakeServer() (Server, error) {
-	var defaultWsjtxAddr net.IP
-	switch runtime.GOOS {
-	case "windows":
-		defaultWsjtxAddr = net.ParseIP(localhostAddr)
-	default:
-		defaultWsjtxAddr = net.ParseIP(multicastAddr)
-	}
-	return MakeServerGiven(defaultWsjtxAddr, wsjtxPort)
+func MakeServer(addr string) (Server, error) {
+	//var defaultWsjtxAddr net.IP
+	//switch runtime.GOOS {
+	//case "windows":
+	//	defaultWsjtxAddr = net.ParseIP(localhostAddr)
+	//default:
+	//	defaultWsjtxAddr = net.ParseIP(multicastAddr)
+	//}
+	return MakeServerGiven(net.ParseIP(addr), wsjtxPort)
 }
 
 // MakeServerGiven creates a UDP connection to communicate with WSJT-X on the given address and
