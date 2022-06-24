@@ -22,7 +22,7 @@ func encodeClear(msg ClearMessage) ([]byte, error) {
 	e := newEncoder()
 	e.encodeUint32(clearNum)
 	e.encodeUtf8(msg.Id)
-	e.encodeUint8(msg.Window)
+	//e.encodeUint8(msg.Window)
 	return e.finish()
 }
 
@@ -37,7 +37,7 @@ func encodeReply(msg ReplyMessage) ([]byte, error) {
 	e.encodeUtf8(msg.Mode)
 	e.encodeUtf8(msg.Message)
 	e.encodeBool(msg.LowConfidence)
-	e.encodeUint8(msg.Modifiers)
+	//e.encodeUint8(msg.Modifiers)
 	return e.finish()
 }
 
@@ -119,6 +119,17 @@ func encodeConfigure(msg ConfigureMessage) ([]byte, error) {
 	return e.finish()
 }
 
+func encodeTriggerCQ(msg TriggerCQMessage) ([]byte, error) {
+	e := newEncoder()
+	e.encodeUint32(triggerCQNum)
+	e.encodeUtf8(msg.Id)
+	e.encodeUtf8(msg.Direction)
+	e.encodeBool(msg.TXPeriod)
+	e.encodeBool(msg.Send)
+	return e.finish()
+
+}
+
 type encoder struct {
 	buf *bytes.Buffer
 }
@@ -172,10 +183,10 @@ func (e encoder) encodeFloat64(num float64) {
 
 func (e encoder) encodeUtf8(str string) {
 	strlen := uint32(len(str))
-	if strlen == 0 {
-		e.encodeUint32(qDataStreamNull)
-		return
-	}
+	//if strlen == 0 {
+	//	e.encodeUint32(qDataStreamNull)
+	//	return
+	//}
 	e.encodeUint32(strlen)
 	e.buf.WriteString(str)
 }

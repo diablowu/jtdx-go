@@ -3,23 +3,29 @@ package monitor
 import (
 	"github.com/k0swe/wsjtx-go/v4/pkg/callsign"
 	"log"
+	"strings"
 )
 
 type MessageFilter interface {
 	Filter(call string) bool
 }
 
-type CJKCallSignFilter struct {
+type DXCCFilter struct {
+	dxcc map[string]int
 }
 
-func (f CJKCallSignFilter) Filter(message string) bool {
+func NewDXCCFilter(dxcc []string) *DXCCFilter {
+	dm := make(map[string]int, len(dxcc))
+	for _, dxccName := range dxcc {
+		dm[strings.TrimSpace(dxccName)] = 0
+	}
+	return &DXCCFilter{dxcc: dm}
+}
+
+func (f DXCCFilter) Filter(message string) bool {
 	if de, _, err := callsign.ExtractCallSignFromMessage(message, true); err == nil {
-		if de.DXCC.DXCCName == "BY" ||
-			de.DXCC.DXCCName == "JA" ||
-			de.DXCC.DXCCName == "BV" ||
-			de.DXCC.DXCCName == "HL" {
-			return true
-		}
+		_, found := f.dxcc[de.DXCC.DXCCName]
+		return found
 	} else {
 		log.Printf("failed to extract callsign %s", err)
 	}

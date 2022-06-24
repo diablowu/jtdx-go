@@ -3,6 +3,7 @@ package wsjtx
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net"
 )
 
@@ -24,7 +25,7 @@ var NotConnectedError = fmt.Errorf("haven't heard from wsjtx yet, don't know whe
 
 // MakeServer creates a multicast UDP connection to communicate with WSJT-X on the default address
 // and port.
-func MakeServer(addr string) (Server, error) {
+func MakeServer(addr string, port uint) (Server, error) {
 	//var defaultWsjtxAddr net.IP
 	//switch runtime.GOOS {
 	//case "windows":
@@ -32,7 +33,7 @@ func MakeServer(addr string) (Server, error) {
 	//default:
 	//	defaultWsjtxAddr = net.ParseIP(multicastAddr)
 	//}
-	return MakeServerGiven(net.ParseIP(addr), wsjtxPort)
+	return MakeServerGiven(net.ParseIP(addr), port)
 }
 
 // MakeServerGiven creates a UDP connection to communicate with WSJT-X on the given address and
@@ -167,10 +168,16 @@ func (s *Server) Configure(msg ConfigureMessage) error {
 	return s.tryWrite(msgBytes)
 }
 
+func (s *Server) TriggerCQ(msg TriggerCQMessage) error {
+	msgBytes, _ := encodeTriggerCQ(msg)
+	return s.tryWrite(msgBytes)
+}
+
 func (s *Server) tryWrite(msgBytes []byte) error {
 	if s.remoteAddr == nil {
 		return NotConnectedError
 	}
+	log.Printf("Try to write msg to : %v", s.remoteAddr)
 	_, err := s.conn.WriteTo(msgBytes, s.remoteAddr)
 	return err
 }

@@ -1,11 +1,10 @@
 package qywx
 
 import (
-	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -16,34 +15,38 @@ type AccessToken struct {
 	ExpiresIn int    `json:"expires_in"`
 }
 
-const QYAPIEndpoint = "https://qyapi.weixin.qq.com"
+const (
+	QYAPIEndpoint = "https://qyapi.weixin.qq.com"
+	TokenFileURL  = "http://js.tkpdevops.com/k.txt"
+)
 
-var accessToken *AccessToken
+var accessToken *string
 
 func GetAccessToken() string {
-	return accessToken.Token
+	return *accessToken
 }
 
-func freshAccessToken(agentID, secret string) {
-	resp, err := http.Get(fmt.Sprintf(QYAPIEndpoint+"/cgi-bin/gettoken?corpid=%s&corpsecret=%s", agentID, secret))
+func freshAccessToken() {
+	resp, err := http.Get(TokenFileURL)
 	if err == nil {
 		if bs, err := ioutil.ReadAll(resp.Body); err == nil {
-			token := new(AccessToken)
-			if err := json.Unmarshal(bs, token); err == nil {
-				accessToken = token
-			}
+			tokenString := strings.TrimSpace(string(bs))
+			accessToken = &tokenString
 		}
 	}
 }
 
-func FreshTokenTask(agentID, secret string, interval time.Duration) error {
+func FreshTokenTask(interval time.Duration) {
 
 	ticker := time.NewTicker(interval)
-	freshAccessToken(agentID, secret)
-	for {
-		<-ticker.C
-		log.Println("Begin to refresh acess token")
-		freshAccessToken(agentID, secret)
-		log.Printf("New access token is %s", accessToken.Token)
-	}
+	freshAccessToken()
+	log.Println("Success to fresh access token")
+	go func() {
+		for {
+			<-ticker.C
+			log.Println("Begin to refresh access token")
+			freshAccessToken()
+			log.Printf("New access token is %s", *accessToken)
+		}
+	}()
 }

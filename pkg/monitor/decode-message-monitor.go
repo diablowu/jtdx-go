@@ -7,34 +7,45 @@ import (
 	"github.com/k0swe/wsjtx-go/v4/pkg/city"
 	"github.com/k0swe/wsjtx-go/v4/pkg/notify"
 	"log"
+	"strings"
 )
 
 type DecodeMessageMonitor interface {
 	Monit(msg wsjtx.DecodeMessage)
 }
 
-type cjkFilteredMonitor struct {
+type dxccFilteredMonitor struct {
 	filter    MessageFilter
 	notifiers []notify.Notifier
 }
 
-func NewDefaultMonitor() DecodeMessageMonitor {
-	cjkFilter := cjkFilteredMonitor{
-		filter:    CJKCallSignFilter{},
-		notifiers: make([]notify.Notifier, 2),
+func NewDefaultMonitor(filteredDXCC []string, notifiers []string) DecodeMessageMonitor {
+
+	log.Printf("Regiestered notifiers: %v", notify.NotifiersMap)
+	log.Printf("Requested notifiers: %v", notifiers)
+	var ns []notify.Notifier
+	for _, name := range notifiers {
+		if n, found := notify.NotifiersMap[strings.TrimSpace(name)]; found {
+			ns = append(ns, n())
+		}
 	}
 
-	cjkFilter.notifiers[0] = notify.LogPrintNotifier{}
-	cjkFilter.notifiers[1] = notify.WeChatMessageNotifier{}
-	return cjkFilter
+	log.Printf("Notifiers: %v was be enabled", ns)
+
+	return dxccFilteredMonitor{
+		filter:    NewDXCCFilter(filteredDXCC),
+		notifiers: ns,
+	}
 }
 
-func (monitor cjkFilteredMonitor) Monit(msg wsjtx.DecodeMessage) {
-	if !monitor.filter.Filter(msg.Message) {
+func (monitor dxccFilteredMonitor) Monit(msg wsjtx.DecodeMessage) {
+	if monitor.filter.Filter(msg.Message) {
+		log.Printf("msg<%s> was be filtered", msg.Message)
+	} else {
 		if de, _, err := callsign.ExtractCallSignFromMessage(msg.Message, true); err == nil {
 			for _, n := range monitor.notifiers {
 				dxcc := city.FindDXCC(de.Number)
-				n.Notify(de.Number, dxcc, fmt.Sprintf("Found DXCC! Call:%s, DXCC:%s, Country:%s", de.Number, dxcc.DXCCName, dxcc.City))
+				n.Notify(de.Number, dxcc, fmt.Sprintf("%s(%s),C:%s", de.Number, dxcc.DXCCName, dxcc.City))
 			}
 		} else {
 			log.Printf("Failed to ExtractCallSignFromMessage: %s", err)

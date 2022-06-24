@@ -3,15 +3,31 @@ package qywx
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
+	"log"
 	"net/http"
+	"time"
 )
 
-func SendAgentMessage(agentID int, userID string, message string) {
+type Service struct {
+	call string
+}
 
-	url := QYAPIEndpoint + "/cgi-bin/message/send?access_token=" + accessToken.Token
+var targetCallSign string
+var agentID int
+
+func Setup(agent int, call string) {
+	targetCallSign = call
+	agentID = agent
+	FreshTokenTask(time.Minute * 15)
+}
+
+func SendAgentMessage(message string) {
+
+	url := QYAPIEndpoint + "/cgi-bin/message/send?access_token=" + *accessToken
 
 	tm := TextMessage{
-		To:      userID,
+		To:      targetCallSign,
 		Type:    "text",
 		AgentID: agentID,
 		Text: struct {
@@ -22,7 +38,9 @@ func SendAgentMessage(agentID int, userID string, message string) {
 	}
 
 	if bs, err := json.Marshal(tm); err == nil {
-		http.Post(url, "application/json", bytes.NewBuffer(bs))
+		resp, _ := http.Post(url, "application/json", bytes.NewBuffer(bs))
+		bs, _ := ioutil.ReadAll(resp.Body)
+		log.Println(string(bs))
 	}
 
 }

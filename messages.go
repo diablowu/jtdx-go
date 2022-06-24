@@ -104,8 +104,7 @@ Out/In.
 https://sourceforge.net/p/wsjt/wsjtx/ci/wsjtx-2.5.2/tree/Network/NetworkMessage.hpp#l234
 */
 type ClearMessage struct {
-	Id     string `json:"id"`
-	Window uint8  `json:"window"` // In only
+	Id string `json:"id"`
 }
 
 const clearNum = 3
@@ -364,3 +363,19 @@ type ConfigureMessage struct {
 }
 
 const configureNum = 15
+
+/*
+TriggerCQ    In         51                     quint32
+ *                         Id (unique key)        utf8
+ *                         Direction              utf8
+ *                         Tx period              bool
+ *                         Send                   bool
+*/
+type TriggerCQMessage struct {
+	Id        string `json:"id"`
+	Direction string `json:"direction"`
+	TXPeriod  bool   `json:"txPeriod"`
+	Send      bool   `json:"send"`
+}
+
+const triggerCQNum = 51
