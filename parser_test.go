@@ -3,6 +3,8 @@ package wsjtx
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"net"
 	"reflect"
 	"testing"
 	"time"
@@ -197,5 +199,15 @@ func argsFrom(str string) parseArgs {
 	return parseArgs{
 		buffer: bytes,
 		length: len(bytes),
+	}
+}
+
+func TestInterfacesList(t *testing.T) {
+	if ifs, err := net.Interfaces(); err != nil {
+		t.Error(err)
+	} else {
+		for _, iface := range ifs {
+			fmt.Println(iface.Name)
+		}
 	}
 }

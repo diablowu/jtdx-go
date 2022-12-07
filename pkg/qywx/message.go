@@ -38,9 +38,13 @@ func SendAgentMessage(message string) {
 	}
 
 	if bs, err := json.Marshal(tm); err == nil {
-		resp, _ := http.Post(url, "application/json", bytes.NewBuffer(bs))
-		bs, _ := ioutil.ReadAll(resp.Body)
-		log.Println(string(bs))
+		if resp, err := http.Post(url, "application/json", bytes.NewBuffer(bs)); err == nil {
+			bs, _ := ioutil.ReadAll(resp.Body)
+			log.Println(string(bs))
+		} else {
+			log.Printf("Failed to send agent message, %s", err)
+		}
+
 	}
 
 }

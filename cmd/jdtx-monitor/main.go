@@ -23,9 +23,13 @@ var (
 	targetCallSign = flag.String("target-call", "wubo16", "Callsign of received message")
 	filteredDXCC   = flag.String("filtered-dxcc", "BY,JA,HL,BV", "Filtered DXCC")
 	notifiers      = flag.String("notifiers", "log,wx", "Notifier list")
+
+	autoTxInterval = flag.Duration("auto-tx-interval", time.Minute*5, "Auto trigger tx interval")
+
+	myCall = flag.String("call", "BI1NIZ", "My callsign")
 )
 
-var defaultDecodeMessageMonitor monitor.DecodeMessageMonitor
+var defaultDecodeMessageMonitors *monitor.DecodeMessageMonitors
 
 // Simple driver binary for wsjtx-go library.
 func main() {
@@ -35,6 +39,7 @@ func main() {
 	} else {
 		log.SetFlags(log.Ldate | log.Ltime)
 	}
+
 	qywx.Setup(*agentID, *targetCallSign)
 	log.Println("Listening for JTDX...")
 	if err := city.LoadFromCTYData(*ctyPath); err != nil {
@@ -43,14 +48,37 @@ func main() {
 		log.Println("Success to load cty data")
 	}
 
-	defaultDecodeMessageMonitor = monitor.NewDefaultMonitor(strings.Split(*filteredDXCC, ","), strings.Split(*notifiers, ","))
+	incomingMessageChannel := make(chan interface{}, 5)
+	outcomingMessageChannel := make(chan interface{}, 5)
+	defaultDecodeMessageMonitors = monitor.CreateDecodeMessageMonitors(
+		monitor.NewDefaultMonitor(*myCall, strings.Split(*filteredDXCC, ","), strings.Split(*notifiers, ",")),
+		monitor.NewAutoTxTriggerMonitor(*myCall, outcomingMessageChannel))
+	//defaultDecodeMessageMonitor =
+	//defaultDecodeMessageMonitor =
 	wsjtxServer, err := wsjtx.MakeServer(*bindAddr, *bindPort)
 	if err != nil {
 		log.Fatalf("%v", err)
 	}
-	wsjtxChannel := make(chan interface{}, 5)
+
 	errChannel := make(chan error, 5)
-	go wsjtxServer.ListenToWsjtx(wsjtxChannel, errChannel)
+	go wsjtxServer.ListenToWsjtx(incomingMessageChannel, outcomingMessageChannel, errChannel)
+
+	ticker := time.NewTicker(*autoTxInterval)
+	go func() {
+		for {
+			<-ticker.C
+			log.Println("starting to trigger cq")
+			err := wsjtxServer.TriggerCQ(wsjtx.TriggerCQMessage{
+				Id:        "JTDX",
+				Direction: "",
+				TXPeriod:  true,
+				Send:      true,
+			})
+			if err != nil {
+				log.Printf("failed to trigger cq %s", err)
+			}
+		}
+	}()
 
 	stdinChannel := make(chan string, 5)
 	go stdinCmd(stdinChannel)
@@ -59,7 +87,7 @@ func main() {
 		select {
 		case err := <-errChannel:
 			log.Printf("error: %v", err)
-		case message := <-wsjtxChannel:
+		case message := <-incomingMessageChannel:
 			handleServerMessage(message)
 		case command := <-stdinChannel:
 			command = strings.ToLower(command)
@@ -89,13 +117,9 @@ func handleServerMessage(message interface{}) {
 	//case wsjtx.HeartbeatMessage:
 	//	log.Println("Heartbeat:", message)
 	case wsjtx.StatusMessage:
-
-		sm := message.(wsjtx.StatusMessage)
-		if sm.Transmitting {
-			log.Println("Status:", message)
-		}
+		log.Println("Other:", reflect.TypeOf(message), message)
 	case wsjtx.DecodeMessage:
-		defaultDecodeMessageMonitor.Monit(message.(wsjtx.DecodeMessage))
+		defaultDecodeMessageMonitors.Do(message.(wsjtx.DecodeMessage))
 	//case wsjtx.ClearMessage:
 	//	log.Println("Clear:", message)
 	//case wsjtx.QsoLoggedMessage:

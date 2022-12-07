@@ -54,7 +54,7 @@ func Test_encodeClear(t *testing.T) {
 	}{
 		{
 			name:    "encodeClear",
-			args:    args{msg: ClearMessage{"WSJT-X", 2}},
+			args:    args{msg: ClearMessage{"WSJT-X"}},
 			want:    decodeHex("adbccbda00000002000000030000000657534a542d5802"),
 			wantErr: false,
 		},

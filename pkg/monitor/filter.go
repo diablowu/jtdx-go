@@ -2,12 +2,11 @@ package monitor
 
 import (
 	"github.com/k0swe/wsjtx-go/v4/pkg/callsign"
-	"log"
 	"strings"
 )
 
 type MessageFilter interface {
-	Filter(call string) bool
+	Filter(de *callsign.CallSign) bool
 }
 
 type DXCCFilter struct {
@@ -22,12 +21,7 @@ func NewDXCCFilter(dxcc []string) *DXCCFilter {
 	return &DXCCFilter{dxcc: dm}
 }
 
-func (f DXCCFilter) Filter(message string) bool {
-	if de, _, err := callsign.ExtractCallSignFromMessage(message, true); err == nil {
-		_, found := f.dxcc[de.DXCC.DXCCName]
-		return found
-	} else {
-		log.Printf("failed to extract callsign %s", err)
-	}
-	return false
+func (f DXCCFilter) Filter(de *callsign.CallSign) bool {
+	_, found := f.dxcc[de.DXCC.DXCCName]
+	return found
 }

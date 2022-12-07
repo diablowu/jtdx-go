@@ -14,6 +14,7 @@ type integrationTestSuite struct {
 	server  wsjtx.Server
 	msgChan chan interface{}
 	errChan chan error
+	outChan chan interface{}
 	fake    *WsjtxFake
 }
 
@@ -25,9 +26,10 @@ func (s *integrationTestSuite) SetupSuite() {
 	var err error
 	s.msgChan = make(chan interface{}, 5)
 	s.errChan = make(chan error, 5)
+	s.outChan = make(chan interface{}, 5)
 	s.server, err = wsjtx.MakeServerGiven(net.ParseIP("127.0.0.1"), 0)
 	s.Require().NoError(err)
-	go s.server.ListenToWsjtx(s.msgChan, s.errChan)
+	go s.server.ListenToWsjtx(s.msgChan, s.outChan, s.errChan)
 	s.T().Log("suite started server listening")
 }
 

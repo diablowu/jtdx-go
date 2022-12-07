@@ -3,6 +3,7 @@ package wsjtx
 import (
 	"errors"
 	"fmt"
+	"golang.org/x/net/ipv4"
 	"log"
 	"net"
 )
@@ -36,6 +37,31 @@ func MakeServer(addr string, port uint) (Server, error) {
 	return MakeServerGiven(net.ParseIP(addr), port)
 }
 
+func makeMulticastServer(addr *net.UDPAddr) (*net.UDPConn, error) {
+
+	conn, err := net.ListenUDP("udp4", addr)
+	if err != nil {
+		return nil, err
+	}
+
+	packetConn := ipv4.NewPacketConn(conn)
+
+	if err := packetConn.JoinGroup(nil, addr); err != nil {
+		return nil, err
+	}
+
+	// test
+	if loop, err := packetConn.MulticastLoopback(); err == nil {
+		log.Printf("MulticastLoopback status:%v\n", loop)
+		if !loop {
+			if err := packetConn.SetMulticastLoopback(true); err != nil {
+				return nil, err
+			}
+		}
+	}
+	return conn, nil
+}
+
 // MakeServerGiven creates a UDP connection to communicate with WSJT-X on the given address and
 // port.
 func MakeServerGiven(ipAddr net.IP, port uint) (Server, error) {
@@ -45,8 +71,9 @@ func MakeServerGiven(ipAddr net.IP, port uint) (Server, error) {
 	}
 	var conn *net.UDPConn
 	if ipAddr.IsMulticast() {
-		conn, err = net.ListenMulticastUDP(addr.Network(), nil, addr)
+		conn, err = makeMulticastServer(addr)
 	} else {
+		log.Printf("%v is normal addrerss", ipAddr)
 		conn, err = net.ListenUDP(addr.Network(), addr)
 	}
 	if err != nil {
@@ -58,6 +85,33 @@ func MakeServerGiven(ipAddr net.IP, port uint) (Server, error) {
 	return Server{conn, nil, false}, nil
 }
 
+//func MakeServerGiven0(ipAddr net.IP, port uint) (Server, error) {
+//	addr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%v:%d", ipAddr, port))
+//	if err != nil {
+//		return Server{}, err
+//	}
+//	var conn *net.UDPConn
+//	if ipAddr.IsMulticast() {
+//		log.Printf("%v is multicast addr", ipAddr)
+//		var iface *net.Interface
+//		iface, err = net.InterfaceByName("WLAN")
+//		if iface != nil {
+//			log.Printf("Broadcast iface :%v", iface)
+//		}
+//		conn, err = net.ListenMulticastUDP(addr.Network(), iface, addr)
+//	} else {
+//		log.Printf("%v is normal addrerss", ipAddr)
+//		conn, err = net.ListenUDP(addr.Network(), addr)
+//	}
+//	if err != nil {
+//		return Server{}, err
+//	}
+//	if conn == nil {
+//		return Server{}, errors.New("wsjtx udp connection not opened")
+//	}
+//	return Server{conn, nil, false}, nil
+//}
+
 func (s *Server) LocalAddr() net.Addr {
 	return s.conn.LocalAddr()
 }
@@ -66,32 +120,35 @@ func (s *Server) LocalAddr() net.Addr {
 // placed in the given message channel. If parsing errors occur, those are reported on the errors
 // channel. If a fatal error happens, e.g. the network connection gets closed, the channels are
 // closed and the goroutine ends.
-func (s *Server) ListenToWsjtx(c chan interface{}, e chan error) {
+func (s *Server) ListenToWsjtx(incomingMessageChannel chan interface{}, outcomingMessageChannel chan interface{}, errChannel chan error) {
 	s.listening = true
-	defer close(c)
-	defer close(e)
+	defer close(outcomingMessageChannel)
+	defer close(incomingMessageChannel)
+	defer close(errChannel)
 
 	for {
+
 		b := make([]byte, bufLen)
 		if s.conn == nil {
-			e <- errors.New("wsjtx connection is nil")
+			errChannel <- errors.New("wsjtx connection is nil")
 			s.listening = false
 			return
 		}
 		length, rAddr, err := s.conn.ReadFromUDP(b)
 		if err != nil {
-			e <- fmt.Errorf("problem reading from wsjtx: %w", err)
+			errChannel <- fmt.Errorf("problem reading from wsjtx: %w", err)
 			s.listening = false
 			return
 		}
 		s.remoteAddr = rAddr
 		message, err := parseMessage(b, length)
 		if err != nil {
-			e <- err
+			errChannel <- err
 		}
 		if message != nil {
-			c <- message
+			incomingMessageChannel <- message
 		}
+
 	}
 }
 

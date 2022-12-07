@@ -12,6 +12,11 @@ type CallSign struct {
 	DXCC   *city.DXCCEntry
 }
 
+var CQDXCallSign = &CallSign{
+	Number: "CQ",
+	DXCC:   nil,
+}
+
 var cqDirectionRegExp = regexp.MustCompile("^[A-Z]{2}$")
 
 func ExtractCallSignFromMessage(msg string, findDXCC bool) (de, dx *CallSign, err error) {
@@ -24,9 +29,9 @@ func ExtractCallSignFromMessage(msg string, findDXCC bool) (de, dx *CallSign, er
 		if parts[0] == "CQ" {
 			// CQ DX
 			if cqDirectionRegExp.MatchString(parts[1]) {
-				return buildCallSign(parts[2], true), nil, nil
+				return buildCallSign(parts[2], true), CQDXCallSign, nil
 			} else {
-				return buildCallSign(parts[1], true), nil, nil
+				return buildCallSign(parts[1], true), CQDXCallSign, nil
 			}
 		} else {
 			return buildCallSign(parts[1], true), buildCallSign(parts[0], true), nil

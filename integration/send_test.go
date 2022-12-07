@@ -26,7 +26,7 @@ func (s *integrationTestSuite) TestSendHeartbeat() {
 func (s *integrationTestSuite) TestSendClear() {
 	s.primeConnection()
 
-	msg := wsjtx.ClearMessage{Id: "WSJT-X", Window: 2}
+	msg := wsjtx.ClearMessage{Id: "WSJT-X"}
 	want := decode(`adbccbda00000002000000030000000657534a542d5802`)
 
 	s.T().Log("sending clear struct")
