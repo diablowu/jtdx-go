@@ -33,28 +33,21 @@ var defaultDecodeMessageMonitors *monitor.DecodeMessageMonitors
 
 // Simple driver binary for wsjtx-go library.
 func main() {
-	flag.Parse()
-	if *verbose {
-		log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
-	} else {
-		log.SetFlags(log.Ldate | log.Ltime)
-	}
+	initCliFlags()
 
 	qywx.Setup(*agentID, *targetCallSign)
+
 	log.Println("Listening for JTDX...")
-	if err := city.LoadFromCTYData(*ctyPath); err != nil {
-		log.Fatalf("%v", err)
-	} else {
-		log.Println("Success to load cty data")
-	}
+
+	initBigCTY()
 
 	incomingMessageChannel := make(chan interface{}, 5)
 	outcomingMessageChannel := make(chan interface{}, 5)
+
 	defaultDecodeMessageMonitors = monitor.CreateDecodeMessageMonitors(
 		monitor.NewDefaultMonitor(*myCall, strings.Split(*filteredDXCC, ","), strings.Split(*notifiers, ",")),
 		monitor.NewAutoTxTriggerMonitor(*myCall, outcomingMessageChannel))
-	//defaultDecodeMessageMonitor =
-	//defaultDecodeMessageMonitor =
+
 	wsjtxServer, err := wsjtx.MakeServer(*bindAddr, *bindPort)
 	if err != nil {
 		log.Fatalf("%v", err)
@@ -93,6 +86,24 @@ func main() {
 			command = strings.ToLower(command)
 			handleCommand(command, wsjtxServer)
 		}
+	}
+}
+
+func initBigCTY() {
+	if err := city.LoadFromCTYData(*ctyPath); err != nil {
+		log.Fatalf("%v", err)
+	} else {
+		log.Println("Success to load cty data")
+	}
+}
+
+func initCliFlags() {
+	flag.Parse()
+
+	if *verbose {
+		log.SetFlags(log.Ldate | log.Ltime | log.Llongfile)
+	} else {
+		log.SetFlags(log.Ldate | log.Ltime)
 	}
 }
 
